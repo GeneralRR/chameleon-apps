@@ -43,9 +43,8 @@ generic: clean
 run:
 	$(RUN_SETTINGS) mpiexec.hydra -np 4 -genvall $(PROG) $(MATRIX_SIZE) 70 50 30 20
 
-run-paper-experiments:
-	$(RUN_SETTINGS_SLURM) mpiexec ${FLAGS_MPI_BATCH} ${MPI_EXPORT_VARS} $(PROG) ${MATRIX_SIZE} ${NUM_TASKS} ${NUM_TASKS} ${NUM_TASKS}
-	@#$(RUN_SETTINGS_SLURM) mpiexec ${FLAGS_MPI_BATCH} ${MPI_EXPORT_VARS} $(PROG) ${MATRIX_SIZE} ${NUM_TASKS} ${NUM_TASKS} ${NUM_TASKS} ${NUM_TASKS}
+run-batch:
+	$(RUN_SETTINGS_SLURM) ${MPIEXEC} ${FLAGS_MPI_BATCH} ${MPI_EXPORT_VARS_SLURM} $(PROG) ${MATRIX_SIZE} ${NUM_TASKS} ${NUM_TASKS} ${NUM_TASKS}
 
 clean:
 	rm -f $(PROG) *.o 
