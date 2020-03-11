@@ -55,6 +55,15 @@
 #define NUM_REPETITIONS 1
 #endif
 
+#ifndef USE_EXTERNAL_CALLBACK
+#define USE_EXTERNAL_CALLBACK 0
+#endif
+
+#if !COMPILE_CHAMELEON
+#undef USE_EXTERNAL_CALLBACK
+#define USE_EXTERNAL_CALLBACK 0
+#endif
+
 //#define LOG(rank, str) fprintf(stderr, "#R%d: %s\n", rank, str)
 #define LOG(rank, str) printf("#R%d: %s\n", rank, str)
 
@@ -81,6 +90,24 @@
 
 #define SPEC_RESTRICT __restrict__
 //#define SPEC_RESTRICT restrict
+
+// static rank id that can also be used in other functions except main
+static int my_rank_id = -1;
+
+#if USE_EXTERNAL_CALLBACK
+typedef struct my_custom_params_t {
+    int val1;
+    TYPE_TASK_ID task_id;
+} my_custom_params_t;
+
+void print_finish_message(void *param) {
+    // parse parameter again to regular data type
+    my_custom_params_t *mydata = (my_custom_params_t *) param;
+    printf("#R%d (OS_TID:%ld): External task finish callback for task with id %d with value %d\n", my_rank_id, syscall(SYS_gettid), mydata->task_id, mydata->val1);
+    // clean up
+    free(mydata);
+}
+#endif
 
 void initialize_matrix_rnd(double *mat, int matrixSize) {
 	double lower_bound = 0;
@@ -120,12 +147,10 @@ void compute_matrix_matrix(double * SPEC_RESTRICT a, double * SPEC_RESTRICT b, d
 }
 
 bool check_test_matrix(double *c, double val, int matrixSize) {
-	int iMyRank;
-	MPI_Comm_rank(MPI_COMM_WORLD, &iMyRank);
 	for(int i=0;i<matrixSize;i++) {
 		for(int j=0;j<matrixSize;j++) {
 			if(fabs(c[i*matrixSize+j] - val) > 1e-3) {
-				printf("#R%d (OS_TID:%ld): Error in matrix entry (%d,%d) expected:%f but value is %f\n", iMyRank, syscall(SYS_gettid),i,j,val,c[i*matrixSize+j]);
+				printf("#R%d (OS_TID:%ld): Error in matrix entry (%d,%d) expected:%f but value is %f\n", my_rank_id, syscall(SYS_gettid),i,j,val,c[i*matrixSize+j]);
 				return false;
 			}
 		}
@@ -197,6 +222,7 @@ int main(int argc, char **argv)
 	MPI_Init_thread(&argc, &argv, requested, &provided);
 	MPI_Comm_size(MPI_COMM_WORLD, &iNumProcs);
 	MPI_Comm_rank(MPI_COMM_WORLD, &iMyRank);
+    my_rank_id = iMyRank;
 	int numberOfTasks;
 	int matrixSize;
 	double fTimeStart, fTimeEnd;
@@ -216,6 +242,10 @@ int main(int argc, char **argv)
     }
     // necessary to be aware of binary base addresses to calculate offset for target entry functions
     chameleon_determine_base_addresses((void *)&main);
+
+#if USE_EXTERNAL_CALLBACK
+    chameleon_external_callback_t call_back_fcn = print_finish_message;
+#endif
 #endif /* COMPILE_CHAMELEON */
 
     if(argc==2) {
@@ -338,17 +368,23 @@ int main(int argc, char **argv)
                     }
                 }
 #endif
-                int32_t res = chameleon_add_task(cur_task);
-                // clean up again
-                delete[] args;
                 // get the id of the last task added
-                TYPE_TASK_ID last_t_id = chameleon_get_last_local_task_id_added();
+                TYPE_TASK_ID last_t_id = chameleon_get_task_id(cur_task);
 #if CHECK_GENERATED_TASK_ID
                 printf("#R%d (OS_TID:%ld): last task that has been created: %ld\n", iMyRank, syscall(SYS_gettid), last_t_id);
                 mtx_t_ids.lock();
                 t_ids.push_back(last_t_id);
                 mtx_t_ids.unlock();
 #endif
+#if USE_EXTERNAL_CALLBACK
+                my_custom_params_t* tmp_struct = (my_custom_params_t*) malloc(sizeof(my_custom_params_t));
+                tmp_struct->val1 = 42;
+                tmp_struct->task_id = last_t_id;
+                chameleon_set_callback_task_finish(cur_task, call_back_fcn, (void*)tmp_struct);
+#endif
+                int32_t res = chameleon_add_task(cur_task);
+                // clean up again
+                delete[] args;
 #if USE_TASK_ANNOTATIONS
                 chameleon_annotations_t* tmp_annotations = chameleon_get_task_annotations(last_t_id);
                 int     found = 0; 
@@ -367,14 +403,13 @@ int main(int argc, char **argv)
 
 #if CHECK_GENERATED_TASK_ID
         #pragma omp barrier
-        #pragma omp master
+        #pragma omp single
         {
             printf("Before Running Tasks\n");
             for (std::list<int32_t>::iterator it=t_ids.begin(); it!=t_ids.end(); ++it) {
                 printf("R#%d Task with id %d finished?? ==> %d\n", iMyRank, *it, chameleon_local_task_has_finished(*it));
             }
         }
-        #pragma omp barrier
 #endif
     	int res = chameleon_distributed_taskwait(0);
 
