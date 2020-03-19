@@ -12,6 +12,24 @@ _Atomic int cnt_gemm = 0;
 _Atomic int cnt_syrk = 0;
 #endif
 
+#if defined(USE_TIMING)
+void helper_start_timing(int tt) {
+    if (tt == TIME_POTRF) {
+        cnt_pdotrf++;
+    } else if (tt == TIME_TRSM) {
+        cnt_trsm++;
+    } else if (tt == TIME_GEMM) {
+        cnt_gemm++;
+    } else if (tt == TIME_SYRK) {
+        cnt_syrk++;
+    }
+}
+
+void helper_end_timing(int tt, double elapsed) {
+    __timing[THREAD_NUM].ts[tt] += elapsed;
+}
+#endif
+
 static void get_block_rank(int *block_rank, int nt);
 
 #ifdef CHAMELEON
@@ -28,14 +46,13 @@ void omp_potrf(double * SPEC_RESTRICT const A, int ts, int ld)
     }
     VT_begin(event_potrf);
 #endif
-#if (defined(DEBUG) || defined(USE_TIMING)) && !defined(CHAMELEON) && !defined(CHAMELEON_MANUAL)
-    cnt_pdotrf++;
+#if (defined(DEBUG) || defined(USE_TIMING))
     START_TIMING(TIME_POTRF);
 #endif
     static int INFO;
     static const char L = 'L';
     dpotrf_(&L, &ts, A, &ld, &INFO);
-#if (defined(DEBUG) || defined(USE_TIMING)) && !defined(CHAMELEON) && !defined(CHAMELEON_MANUAL)
+#if (defined(DEBUG) || defined(USE_TIMING))
     END_TIMING(TIME_POTRF);
 #endif
 #ifdef TRACE
@@ -57,14 +74,13 @@ void omp_trsm(double * SPEC_RESTRICT A, double * SPEC_RESTRICT B, int ts, int ld
     }
     VT_begin(event_trsm);
 #endif
-#if (defined(DEBUG) || defined(USE_TIMING)) && !defined(CHAMELEON) && !defined(CHAMELEON_MANUAL)
-    cnt_trsm++;
+#if (defined(DEBUG) || defined(USE_TIMING))
     START_TIMING(TIME_TRSM);
 #endif
     static char LO = 'L', TR = 'T', NU = 'N', RI = 'R';
     static double DONE = 1.0;
     dtrsm_(&RI, &LO, &TR, &NU, &ts, &ts, &DONE, A, &ld, B, &ld );
-#if (defined(DEBUG) || defined(USE_TIMING)) && !defined(CHAMELEON) && !defined(CHAMELEON_MANUAL)
+#if (defined(DEBUG) || defined(USE_TIMING))
     END_TIMING(TIME_TRSM);
 #endif
 #ifdef TRACE
@@ -86,14 +102,13 @@ void omp_gemm(double * SPEC_RESTRICT A, double * SPEC_RESTRICT B, double * SPEC_
     }
     VT_begin(event_gemm);
 #endif
-#if (defined(DEBUG) || defined(USE_TIMING)) && !defined(CHAMELEON) && !defined(CHAMELEON_MANUAL)
-    cnt_gemm++;
+#if (defined(DEBUG) || defined(USE_TIMING))
     START_TIMING(TIME_GEMM);
 #endif
     static const char TR = 'T', NT = 'N';
     static double DONE = 1.0, DMONE = -1.0;
     dgemm_(&NT, &TR, &ts, &ts, &ts, &DMONE, A, &ld, B, &ld, &DONE, C, &ld);
-#if (defined(DEBUG) || defined(USE_TIMING)) && !defined(CHAMELEON) && !defined(CHAMELEON_MANUAL)
+#if (defined(DEBUG) || defined(USE_TIMING))
     END_TIMING(TIME_GEMM);
 #endif
 #ifdef TRACE
@@ -115,14 +130,14 @@ void omp_syrk(double * SPEC_RESTRICT A, double * SPEC_RESTRICT B, int ts, int ld
     }
     VT_begin(event_syrk);
 #endif
-#if (defined(DEBUG) || defined(USE_TIMING)) && !defined(CHAMELEON) && !defined(CHAMELEON_MANUAL)
+#if (defined(DEBUG) || defined(USE_TIMING))
     cnt_syrk++;
     START_TIMING(TIME_SYRK);
 #endif
     static char LO = 'L', NT = 'N';
     static double DONE = 1.0, DMONE = -1.0;
     dsyrk_(&LO, &NT, &ts, &ts, &DMONE, A, &ld, &DONE, B, &ld );
-#if (defined(DEBUG) || defined(USE_TIMING)) && !defined(CHAMELEON) && !defined(CHAMELEON_MANUAL)
+#if (defined(DEBUG) || defined(USE_TIMING))
     END_TIMING(TIME_SYRK);
 #endif
 #ifdef TRACE
@@ -305,7 +320,7 @@ int main(int argc, char *argv[])
     printf("[%d] has %d tiles in total and %d tiles on the diagonal\n", mype, nr_tiles, nr_tiles_diag);
 #endif
 
-    double *A[nt][nt], *B, *C[nt], *Ans[nt][nt];
+    double * SPEC_RESTRICT A[nt][nt], * SPEC_RESTRICT B, * SPEC_RESTRICT C[nt], * SPEC_RESTRICT Ans[nt][nt];
 
 #pragma omp parallel
 {
@@ -369,7 +384,7 @@ int main(int argc, char *argv[])
     if (mype == 0)
       printf("Starting parallel computation\n");
     const float t1 = get_time();
-    cholesky_mpi(ts, nt, (double* (*)[nt])A, B, C, block_rank);
+    cholesky_mpi(ts, nt, (double* SPEC_RESTRICT (*)[nt])A, B, C, block_rank);
     const float t2 = get_time() - t1;
     if (mype == 0)
       printf("Finished parallel computation\n");

@@ -22,7 +22,13 @@
 #include "VT.h"
 #endif
 
-#define SPEC_RESTRICT __restrict__
+#if defined(USE_TIMING)
+void helper_start_timing(int tt);
+void helper_end_timing(int tt, double elapsed);
+#endif
+
+// #define SPEC_RESTRICT __restrict__
+#define SPEC_RESTRICT restrict
 
 #if defined(CHAMELEON) || defined(CHAMELEON_MANUAL)
 #include "chameleon.h"

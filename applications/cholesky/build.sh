@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/usr/local_rwth/bin/zsh
 
 # for target in intel clang chameleon
-for target in intel chameleon chameleon_manual
+for target in intel chameleon_manual
 do
   # load default modules
   module purge
@@ -14,7 +14,7 @@ do
     fi
   done < "flags_${target}.def"
   module load ${LOAD_COMPILER}
-  module load intelmpi/2018.3
+  module load intelmpi/2018
   module load ${LOAD_LIBS}
   module li
 

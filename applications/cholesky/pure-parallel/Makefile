@@ -17,13 +17,15 @@ BOOL_CHECK      ?= 0
 #CFLAGS          += -DTRACE -I$(VT_ROOT)/include
 #LDFLAGS         += -trace
 
+.PHONY: ch_$(TARGET)_par ch_$(TARGET)_par_timing clean cleanall
+
 all : ch_$(TARGET)_par ch_$(TARGET)_par_timing
 
-ch_$(TARGET)_par: ch_ompss.c ../common/ch_common.c Makefile
-	$(CC) $(CFLAGS) -o $@ ch_ompss.c -g ../common/ch_common.c $(LDFLAGS)
+ch_$(TARGET)_par:
+	$(CC) $(CFLAGS) -g -o $@ ch_ompss.c ../common/ch_common.c $(LDFLAGS)
 
-ch_$(TARGET)_par_timing: ch_ompss.c ../common/ch_common.c Makefile
-	$(CC) $(CFLAGS) -o $@ ch_ompss.c -g ../common/ch_common.c $(LDFLAGS) -DUSE_TIMING
+ch_$(TARGET)_par_timing:
+	$(CC) $(CFLAGS) -g -o $@ ch_ompss.c ../common/ch_common.c $(LDFLAGS) -DUSE_TIMING
 
 run:
 	$(RUN_SETTINGS) mpiexec.hydra -np $(NUM_RANKS) -genvall ./$(PROG_EXE) $(MATRIX_SIZE) $(BLOCK_SIZE) $(BOOL_CHECK)

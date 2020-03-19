@@ -1,7 +1,9 @@
 #ifndef _BENCH_CHOLESKY_TIMING_
 #define _BENCH_CHOLESKY_TIMING_
 
-enum {
+#include "common/ch_common.h"
+
+typedef enum timing_type_t {
     TIME_POTRF = 0,
     TIME_TRSM  = 1,
     TIME_GEMM  = 2,
@@ -10,7 +12,7 @@ enum {
     TIME_CREATE = 5,
     TIME_TOTAL = 6,
     TIME_CNT
-};
+} timing_type_t;
 
 
 typedef struct perthread_timing {
@@ -65,8 +67,8 @@ perthread_timing_t *__timing;
 
 #define THREAD_NUM omp_get_thread_num()
 
-#define START_TIMING(timer) double __ts_##timer = timestamp(); int __timer = timer;
-#define END_TIMING(timer) __timing[THREAD_NUM].ts[timer] += timestamp() - __ts_##timer
+#define START_TIMING(timer) double __ts_##timer = timestamp(); int __timer = timer; helper_start_timing(timer);
+#define END_TIMING(timer) __ts_##timer = timestamp() - __ts_##timer; helper_end_timing(timer, __ts_##timer);
 
 static double timestamp(){
     return MPI_Wtime();
