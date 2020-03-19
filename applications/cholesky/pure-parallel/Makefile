@@ -17,14 +17,14 @@ BOOL_CHECK      ?= 0
 #CFLAGS          += -DTRACE -I$(VT_ROOT)/include
 #LDFLAGS         += -trace
 
-.PHONY: ch_$(TARGET)_par ch_$(TARGET)_par_timing clean cleanall
+.PHONY: ch-$(TARGET)-par ch-$(TARGET)-par-timing clean cleanall
 
-all : ch_$(TARGET)_par ch_$(TARGET)_par_timing
+all : ch-$(TARGET)-par ch-$(TARGET)-par-timing
 
-ch_$(TARGET)_par:
+ch-$(TARGET)-par:
 	$(CC) $(CFLAGS) -g -o $@ ch_ompss.c ../common/ch_common.c $(LDFLAGS)
 
-ch_$(TARGET)_par_timing:
+ch-$(TARGET)-par-timing:
 	$(CC) $(CFLAGS) -g -o $@ ch_ompss.c ../common/ch_common.c $(LDFLAGS) -DUSE_TIMING
 
 run:
@@ -34,7 +34,7 @@ trace:
 	$(RUN_SETTINGS) mpiexec.hydra -trace -np $(NUM_RANKS) -genvall ./$(PROG_EXE) $(MATRIX_SIZE) $(BLOCK_SIZE) $(BOOL_CHECK)
 
 clean:
-	rm -f *.o ch_$(TARGET)_par ch_$(TARGET)_par_timing
+	rm -f *.o ch-$(TARGET)-par ch-$(TARGET)-par-timing
 
 cleanall: 
-	rm -f *.o ch_*_par ch_*_par_extrae ch_*_par_timing
+	rm -f *.o ch-*-par ch-*-par_extrae ch-*-par-timing

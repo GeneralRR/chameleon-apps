@@ -285,8 +285,8 @@ int main(int argc, char *argv[])
 
     const int nt = n / ts;
 
-    if (mype == 0)
-        printf("nt = %d, ts = %d\n", nt, ts);
+    // if (mype == 0)
+    printf("R#%d, nt = %d, ts = %d\n", mype, nt, ts);
 
     /* Set block rank */
     int *block_rank = malloc(nt * nt * sizeof(int));
