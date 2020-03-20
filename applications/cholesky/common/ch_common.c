@@ -285,8 +285,7 @@ int main(int argc, char *argv[])
 
     const int nt = n / ts;
 
-    // if (mype == 0)
-    printf("R#%d, nt = %d, ts = %d\n", mype, nt, ts);
+    if (mype == 0) printf("R#%d, n = %d, nt = %d, ts = %d\n", mype, n, nt, ts);
 
     /* Set block rank */
     int *block_rank = malloc(nt * nt * sizeof(int));
@@ -326,47 +325,45 @@ int main(int argc, char *argv[])
 {
 #pragma omp single
 {
-  for (int i = 0; i < nt; i++) {
-    for (int j = 0; j < nt; j++) {
-#pragma omp task depend(out: A[i][j]) shared(Ans, A)
-{
-      int error;
-      if (check) {
-        error = MPI_Alloc_mem(ts * ts * sizeof(double), MPI_INFO_NULL, &Ans[i][j]);
-        assert(error == MPI_SUCCESS);
-        initialize_tile(ts, Ans[i][j]);
-      }
-      if (block_rank[i*nt+j] == mype) {
-        error = MPI_Alloc_mem(ts * ts * sizeof(double), MPI_INFO_NULL, &A[i][j]);
-        assert(error == MPI_SUCCESS);
-        if (!check) {
-          initialize_tile(ts, A[i][j]);
-        } else {
-          for (int k = 0; k < ts * ts; k++) {
-            A[i][j][k] = Ans[i][j][k];
-          }
+    for (int i = 0; i < nt; i++) {
+        for (int j = 0; j < nt; j++) {
+            #pragma omp task shared(Ans, A)
+            {
+                int error;
+                if (check) {
+                    Ans[i][j] = (double*) malloc(ts * ts * sizeof(double));
+                    initialize_tile(ts, Ans[i][j]);
+                }
+                if (block_rank[i*nt+j] == mype) {
+                    A[i][j] = (double*) malloc(ts * ts * sizeof(double));
+                    if (!check) {
+                        initialize_tile(ts, A[i][j]);
+                    } else {
+                        for (int k = 0; k < ts * ts; k++) {
+                            A[i][j][k] = Ans[i][j][k];
+                        }
+                    }
+                }
+            }
         }
-      }
-}
     }
-#pragma omp task depend(inout: A[i][i]) shared(Ans, A)
-{
-    // add to diagonal
-    if (check) {
-      Ans[i][i][i*ts+i] = (double)nt;
-    }
-    if (block_rank[i*nt+i] == mype) {
-      A[i][i][i*ts+i] = (double)nt;
-    }
-}
-  }
 } // omp single
 } // omp parallel
 
-  MPI_Alloc_mem(ts * ts * sizeof(double), MPI_INFO_NULL, &B);
-  for (int i = 0; i < nt; i++) {
-    MPI_Alloc_mem(ts * ts * sizeof(double), MPI_INFO_NULL, &C[i]);
-  }
+    for (int i = 0; i < nt; i++) {
+        // add to diagonal
+        if (check) {
+            Ans[i][i][i*ts+i] = (double)nt;
+        }
+        if (block_rank[i*nt+i] == mype) {
+            A[i][i][i*ts+i] = (double)nt;
+        }
+    }
+
+    B = (double*) malloc(ts * ts * sizeof(double));
+    for (int i = 0; i < nt; i++) {
+        C[i] = (double*) malloc(ts * ts * sizeof(double));
+    }
 
 #pragma omp parallel
 #pragma omp single
