@@ -10,7 +10,7 @@ endif
 # parameters and settings for execution
 RUN_SETTINGS    = OMP_PLACES=cores OMP_PROC_BIND=spread I_MPI_PIN=1 I_MPI_PIN_DOMAIN=auto
 NUM_RANKS       ?= 2 
-PROG_EXE        ?= ch_$(TARGET)_par
+PROG_EXE        ?= ch-$(TARGET)-par
 MATRIX_SIZE     ?= 15360
 BLOCK_SIZE      ?= 512
 BOOL_CHECK      ?= 0

@@ -5,7 +5,7 @@
 
 void cholesky_mpi(const int ts, const int nt, double * SPEC_RESTRICT A[nt][nt], double * SPEC_RESTRICT B, double * SPEC_RESTRICT C[nt], int *block_rank)
 {
-#if defined(CHAMELEON) || defined(CHAMELEON_MANUAL)
+#if defined(CHAMELEON) || defined(CHAMELEON_TARGET)
     #pragma omp parallel
     {
         chameleon_thread_init();
@@ -104,13 +104,13 @@ void cholesky_mpi(const int ts, const int nt, double * SPEC_RESTRICT A[nt][nt], 
                 if (block_rank[k*nt+k] == mype) {
                     double * SPEC_RESTRICT tmp_a_k_k = A[k][k];
                     double * SPEC_RESTRICT tmp_a_k_i = A[k][i];
-#ifdef CHAMELEON
+#ifdef CHAMELEON_TARGET
                     #pragma omp target map(to: tmp_a_k_k[0:ts*ts]) map(tofrom: tmp_a_k_i[0:ts*ts]) device(1002)
                     {
                         // printf("In Task: AKK = " DPxMOD ", AKI = " DPxMOD "\n", DPxPTR(tmp_a_k_k), DPxPTR(tmp_a_k_i));
                         omp_trsm(tmp_a_k_k, tmp_a_k_i, ts, ts);
                     }
-#elif CHAMELEON_MANUAL
+#elif CHAMELEON
                     chameleon_map_data_entry_t* args = (chameleon_map_data_entry_t*) malloc(4*sizeof(chameleon_map_data_entry_t));
                     args[0] = chameleon_map_data_entry_create(tmp_a_k_k, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO);
                     args[1] = chameleon_map_data_entry_create(tmp_a_k_i, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO | CHAM_OMP_TGT_MAPTYPE_FROM);
@@ -129,13 +129,13 @@ void cholesky_mpi(const int ts, const int nt, double * SPEC_RESTRICT A[nt][nt], 
                 } else {
                     double * SPEC_RESTRICT tmp_a_k_i   = A[k][i];
                     // printf("R#%d T#%d (OS_TID:%ld): --> Before Task: B = " DPxMOD ", AKI = " DPxMOD "\n", mype, omp_get_thread_num(), syscall(SYS_gettid), DPxPTR(B), DPxPTR(tmp_a_k_i));
-#ifdef CHAMELEON
+#ifdef CHAMELEON_TARGET
                     #pragma omp target map(to: B[0:ts*ts]) map(tofrom: tmp_a_k_i[0:ts*ts]) device(1002)
                     {
                         // printf("In Task: B = " DPxMOD ", AKI = " DPxMOD "\n", DPxPTR(B), DPxPTR(tmp_a_k_i));
                         omp_trsm(B, tmp_a_k_i, ts, ts);
                     }
-#elif CHAMELEON_MANUAL
+#elif CHAMELEON
                     chameleon_map_data_entry_t* args = (chameleon_map_data_entry_t*) malloc(4*sizeof(chameleon_map_data_entry_t));
                     args[0] = chameleon_map_data_entry_create(B, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO);
                     args[1] = chameleon_map_data_entry_create(tmp_a_k_i, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO | CHAM_OMP_TGT_MAPTYPE_FROM);
@@ -155,7 +155,7 @@ void cholesky_mpi(const int ts, const int nt, double * SPEC_RESTRICT A[nt][nt], 
             }
         }
 
-#if defined(CHAMELEON) || defined(CHAMELEON_MANUAL)
+#if defined(CHAMELEON) || defined(CHAMELEON_TARGET)
         chameleon_distributed_taskwait(0);
 #else
         #pragma omp barrier
@@ -244,12 +244,12 @@ void cholesky_mpi(const int ts, const int nt, double * SPEC_RESTRICT A[nt][nt], 
                     double * SPEC_RESTRICT tmp_c_j     = C[j];
                     if (block_rank[j*nt+i] == mype) {
                         if (block_rank[k*nt+i] == mype && block_rank[k*nt+j] == mype) {
-#ifdef CHAMELEON
+#ifdef CHAMELEON_TARGET
                             #pragma omp target map(to: tmp_a_k_i[0:ts*ts], tmp_a_k_j[0:ts*ts]) map(tofrom: tmp_a_j_i[0:ts*ts]) device(1002)
                             {
                                 omp_gemm(tmp_a_k_i, tmp_a_k_j, tmp_a_j_i, ts, ts);
                             }
-#elif CHAMELEON_MANUAL
+#elif CHAMELEON
                             chameleon_map_data_entry_t* args = (chameleon_map_data_entry_t*) malloc(5*sizeof(chameleon_map_data_entry_t));
                             args[0] = chameleon_map_data_entry_create(tmp_a_k_i, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO);
                             args[1] = chameleon_map_data_entry_create(tmp_a_k_j, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO);
@@ -266,12 +266,12 @@ void cholesky_mpi(const int ts, const int nt, double * SPEC_RESTRICT A[nt][nt], 
                             }
 #endif
                         } else if (block_rank[k*nt+i] != mype && block_rank[k*nt+j] == mype) {
-#ifdef CHAMELEON
+#ifdef CHAMELEON_TARGET
                             #pragma omp target map(to: tmp_c_i[0:ts*ts], tmp_a_k_j[0:ts*ts]) map(tofrom: tmp_a_j_i[0:ts*ts]) device(1002)
                             {
                                 omp_gemm(tmp_c_i, tmp_a_k_j, tmp_a_j_i, ts, ts);
                             }
-#elif CHAMELEON_MANUAL
+#elif CHAMELEON
                             chameleon_map_data_entry_t* args = (chameleon_map_data_entry_t*) malloc(5*sizeof(chameleon_map_data_entry_t));
                             args[0] = chameleon_map_data_entry_create(tmp_c_i, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO);
                             args[1] = chameleon_map_data_entry_create(tmp_a_k_j, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO);
@@ -288,12 +288,12 @@ void cholesky_mpi(const int ts, const int nt, double * SPEC_RESTRICT A[nt][nt], 
                             }
 #endif
                         } else if (block_rank[k*nt+i] == mype && block_rank[k*nt+j] != mype) {
-#ifdef CHAMELEON
+#ifdef CHAMELEON_TARGET
                             #pragma omp target map(to: tmp_a_k_i[0:ts*ts], tmp_c_j[0:ts*ts]) map(tofrom: tmp_a_j_i[0:ts*ts]) device(1002)
                             {
                                 omp_gemm(tmp_a_k_i, tmp_c_j, tmp_a_j_i, ts, ts);
                             }
-#elif CHAMELEON_MANUAL
+#elif CHAMELEON
                             chameleon_map_data_entry_t* args = (chameleon_map_data_entry_t*) malloc(5*sizeof(chameleon_map_data_entry_t));
                             args[0] = chameleon_map_data_entry_create(tmp_a_k_i, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO);
                             args[1] = chameleon_map_data_entry_create(tmp_c_j, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO);
@@ -310,12 +310,12 @@ void cholesky_mpi(const int ts, const int nt, double * SPEC_RESTRICT A[nt][nt], 
                             }
 #endif
                         } else {
-#ifdef CHAMELEON
+#ifdef CHAMELEON_TARGET
                             #pragma omp target map(to: tmp_c_i[0:ts*ts], tmp_c_j[0:ts*ts]) map(tofrom: tmp_a_j_i[0:ts*ts]) device(1002)
                             {
                                 omp_gemm(tmp_c_i, tmp_c_j, tmp_a_j_i, ts, ts);
                             }
-#elif CHAMELEON_MANUAL
+#elif CHAMELEON
                             chameleon_map_data_entry_t* args = (chameleon_map_data_entry_t*) malloc(5*sizeof(chameleon_map_data_entry_t));
                             args[0] = chameleon_map_data_entry_create(tmp_c_i, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO);
                             args[1] = chameleon_map_data_entry_create(tmp_c_j, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO);
@@ -339,12 +339,12 @@ void cholesky_mpi(const int ts, const int nt, double * SPEC_RESTRICT A[nt][nt], 
 #endif
                 if (block_rank[i*nt+i] == mype) {
                     if (block_rank[k*nt+i] == mype) {
-#ifdef CHAMELEON
+#ifdef CHAMELEON_TARGET
                         #pragma omp target map(tofrom: tmp_a_k_i[0:ts*ts]) map(to: tmp_a_i_i[0:ts*ts]) device(1002)
                         {
                             omp_syrk(tmp_a_k_i, tmp_a_i_i, ts, ts);
                         }
-#elif CHAMELEON_MANUAL
+#elif CHAMELEON
                         chameleon_map_data_entry_t* args = (chameleon_map_data_entry_t*) malloc(4*sizeof(chameleon_map_data_entry_t));
                         args[0] = chameleon_map_data_entry_create(tmp_a_k_i, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO);
                         args[1] = chameleon_map_data_entry_create(tmp_a_i_i, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO | CHAM_OMP_TGT_MAPTYPE_FROM);
@@ -360,12 +360,12 @@ void cholesky_mpi(const int ts, const int nt, double * SPEC_RESTRICT A[nt][nt], 
                         }
 #endif
                     } else {
-#ifdef CHAMELEON
+#ifdef CHAMELEON_TARGET
                         #pragma omp target map(tofrom: tmp_c_i[0:ts*ts]) map(to: tmp_a_i_i[0:ts*ts]) device(1002)
                         {
                             omp_syrk(tmp_c_i, tmp_a_i_i, ts, ts);
                         }
-#elif CHAMELEON_MANUAL
+#elif CHAMELEON
                         chameleon_map_data_entry_t* args = (chameleon_map_data_entry_t*) malloc(4*sizeof(chameleon_map_data_entry_t));
                         args[0] = chameleon_map_data_entry_create(tmp_c_i, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO);
                         args[1] = chameleon_map_data_entry_create(tmp_a_i_i, ts*ts*sizeof(double), CHAM_OMP_TGT_MAPTYPE_TO | CHAM_OMP_TGT_MAPTYPE_FROM);
@@ -392,7 +392,7 @@ void cholesky_mpi(const int ts, const int nt, double * SPEC_RESTRICT A[nt][nt], 
 #if PRINT_DEBUG
         my_print("Iteration [%03d][998]\tR#%d T#%d (OS_TID:%ld): --> 6 Proceeding to chameleon_distributed_taskwait(...)/barrier\n", k, mype, omp_get_thread_num(), syscall(SYS_gettid));
 #endif
-#if defined(CHAMELEON) || defined(CHAMELEON_MANUAL)
+#if defined(CHAMELEON) || defined(CHAMELEON_TARGET)
         chameleon_distributed_taskwait(0);
 #else
         #pragma omp barrier
@@ -400,12 +400,12 @@ void cholesky_mpi(const int ts, const int nt, double * SPEC_RESTRICT A[nt][nt], 
 #if PRINT_DEBUG
         my_print("Iteration [%03d][999]\tR#%d T#%d (OS_TID:%ld): --> 7 Finished chameleon_distributed_taskwait(...)/barrier\n", k, mype, omp_get_thread_num(), syscall(SYS_gettid));
 #endif
-#if !defined(CHAMELEON) && !defined(CHAMELEON_MANUAL)
-        #pragma omp single
-        {
-        PRINT_INTERMEDIATE_TIMINGS(omp_get_num_threads());
-        }
-#endif
+// #if !defined(CHAMELEON) && !defined(CHAMELEON_TARGET)
+//         #pragma omp single
+//         {
+//         PRINT_INTERMEDIATE_TIMINGS(omp_get_num_threads());
+//         }
+// #endif
     }
 } /* end omp parallel */
     END_TIMING(TIME_TOTAL);
@@ -416,7 +416,7 @@ void cholesky_mpi(const int ts, const int nt, double * SPEC_RESTRICT A[nt][nt], 
 
 	FREE_TIMING();
 
-#if defined(CHAMELEON) || defined(CHAMELEON_MANUAL)
+#if defined(CHAMELEON) || defined(CHAMELEON_TARGET)
     chameleon_finalize();
 #endif
     free(send_flags);

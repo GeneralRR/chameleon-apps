@@ -1,3 +1,0 @@
-CC = cc
-CFLAGS  += -I${MKLROOT}/include -O3 -I./ -std=gnu99  -fopenmp -g
-LDFLAGS += -std=gnu99 -lrt -lpthread -lm -fopenmp

@@ -1,6 +1,0 @@
-LOAD_COMPILER="intel/19.0"
-LOAD_LIBS="chameleon-lib/intel_1.0"
-
-CC      = I_MPI_CC=icc I_MPI_CXX=icpc mpiicc
-CFLAGS  = -g -O3 -restrict -std=c11 -I./ -I../common -mt_mpi -qopenmp -w $(FLAGS_MKL_INCLUDE) -DCHAMELEON_MANUAL -DHAVE_COMM_SENTINEL -DHAVE_INTERMEDIATE_COMM_SENTINEL
-LDFLAGS = -std=c11 -lrt -lpthread -lm -mt_mpi -qopenmp -w $(FLAGS_MKL_LINKER) -DCHAMELEON_MANUAL -lchameleon

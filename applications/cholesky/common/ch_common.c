@@ -32,7 +32,7 @@ void helper_end_timing(int tt, double elapsed) {
 
 static void get_block_rank(int *block_rank, int nt);
 
-#ifdef CHAMELEON
+#ifdef CHAMELEON_TARGET
 #pragma omp declare target
 #endif
 void omp_potrf(double * SPEC_RESTRICT const A, int ts, int ld)
@@ -59,7 +59,7 @@ void omp_potrf(double * SPEC_RESTRICT const A, int ts, int ld)
     VT_end(event_potrf);
 #endif
 }
-#ifdef CHAMELEON
+#ifdef CHAMELEON_TARGET
 #pragma omp end declare target
 #pragma omp declare target
 #endif
@@ -87,7 +87,7 @@ void omp_trsm(double * SPEC_RESTRICT A, double * SPEC_RESTRICT B, int ts, int ld
     VT_end(event_trsm);
 #endif
 }
-#ifdef CHAMELEON
+#ifdef CHAMELEON_TARGET
 #pragma omp end declare target
 #pragma omp declare target
 #endif
@@ -115,7 +115,7 @@ void omp_gemm(double * SPEC_RESTRICT A, double * SPEC_RESTRICT B, double * SPEC_
     VT_end(event_gemm);
 #endif
 }
-#ifdef CHAMELEON
+#ifdef CHAMELEON_TARGET
 #pragma omp end declare target
 #pragma omp declare target
 #endif
@@ -144,7 +144,7 @@ void omp_syrk(double * SPEC_RESTRICT A, double * SPEC_RESTRICT B, int ts, int ld
     VT_end(event_syrk);
 #endif
 }
-#ifdef CHAMELEON
+#ifdef CHAMELEON_TARGET
 #pragma omp end declare target
 #endif
 
@@ -211,7 +211,7 @@ inline void wait(MPI_Request *comm_req)
 
     MPI_Test(comm_req, &comm_comp, MPI_STATUS_IGNORE);
     while (!comm_comp) {
-#if defined(CHAMELEON) || defined(CHAMELEON_MANUAL)
+#if defined(CHAMELEON) || defined(CHAMELEON_TARGET)
     int32_t res = chameleon_taskyield();
 #else
 #pragma omp taskyield

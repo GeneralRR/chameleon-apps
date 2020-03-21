@@ -30,7 +30,7 @@ void helper_end_timing(int tt, double elapsed);
 // #define SPEC_RESTRICT __restrict__
 #define SPEC_RESTRICT restrict
 
-#if defined(CHAMELEON) || defined(CHAMELEON_MANUAL)
+#if defined(CHAMELEON) || defined(CHAMELEON_TARGET)
 #include "chameleon.h"
 #ifndef my_print
 #define my_print(...) chameleon_print(0, "Cholesky", mype, __VA_ARGS__);
@@ -98,7 +98,7 @@ inline static void waitall(MPI_Request *comm_req, int n)
     MPI_Testall(n, comm_req, &flag, MPI_STATUSES_IGNORE);
     if (flag) break;
     (void)flag; // <-- make the Cray compiler happy
-#if defined(CHAMELEON) || defined(CHAMELEON_MANUAL)
+#if defined(CHAMELEON) || defined(CHAMELEON_TARGET)
     int32_t res = chameleon_taskyield();
 #else
 #pragma omp taskyield
