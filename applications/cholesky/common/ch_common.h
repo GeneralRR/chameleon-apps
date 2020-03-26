@@ -101,7 +101,7 @@ inline static void waitall(MPI_Request *comm_req, int n)
 #if defined(CHAMELEON) || defined(CHAMELEON_TARGET)
     int32_t res = chameleon_taskyield();
 #else
-#pragma omp taskyield
+    #pragma omp taskyield
 #endif
   }
 #endif
