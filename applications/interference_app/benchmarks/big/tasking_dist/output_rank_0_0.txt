@@ -1,0 +1,9 @@
+This is the Outputfile for Rank 0
+#R0: using user-defined initial load distribution...
+#R0: will create 10000 tasks
+Executing parallel init
+Executing iteration 0 ...
+Executing iteration 1 ...
+#R0: Computations with normal tasking took 31.93584
+#R0: Validation:
+#R0: TEST SUCCESS

@@ -1,0 +1,10 @@
+This is the Outputfile for Rank 0
+chameleon_init - dummy region
+#R0: using user-defined initial load distribution...
+#R0: will create 1000 tasks
+Executing parallel init
+Executing iteration 0 ...
+Executing iteration 1 ...
+#R0: Computations with chameleon took 5.59089
+#R0: Validation:
+#R0: TEST SUCCESS
